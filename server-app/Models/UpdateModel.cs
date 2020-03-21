@@ -7,7 +7,7 @@ namespace DocShareApp.Models
 {
     //No Required annotations needed. Only the fields with values will be updated 
     //with a logic that is located in the Update method of the UserService.
-    public class Update
+    public class UpdateModel
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }
