@@ -2,20 +2,23 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DocShareApp.Controllers
 {
+    [Authorize]
     [Route("api")]
     [ApiController]
     public class DocShareAppController : ControllerBase
     {
         //POST: api/DocShareApp/Login
+
         [HttpPost("Login")]
-        public String Put(string useraname, string password)
+        public IActionResult Teste()
         {
-            return "Foste loggado, Mihai!";
+            return Ok(new { message = "Foste retornado Mihail" }); 
         }
 
 

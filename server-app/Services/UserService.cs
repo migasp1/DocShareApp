@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using DocShareApp.Helpers;
+using DocShareApp.Models;
+using DocShareApp.Mapper;
 
 namespace DocShareApp.Services
 {
@@ -11,10 +13,13 @@ namespace DocShareApp.Services
     {
 
         private DataContext _context;
+        private IUserMapper _mapper;
 
-        public UserService(DataContext context)
+        public UserService(DataContext context, IUserMapper userMapper)
         {
-            this._context = context;
+            _context = context;
+            _mapper = userMapper;
+
         }
 
         public User Authenticate(string username, string password)
@@ -41,18 +46,16 @@ namespace DocShareApp.Services
             return user;
         }
 
-        public User Create(User user, string password)
+        public User Create(RegisterModel registerModel)
         {
-            if (string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(registerModel.Password))
                 throw new ArgumentException("Password is required");
-            if (_context.Users.Any(x => x.Username == user.Username))
-                throw new ApplicationException("Username \"" + user.Username + "\" is already taken");
+            if (_context.Users.Any(x => x.Username == registerModel.Username))
+                throw new ApplicationException("Username \"" + registerModel.Username + "\" is already taken");
 
-            byte[] passwordHash, passwordSalt;
-            CreatePasswordHash(password, out passwordHash, out passwordSalt);
+            CreatePasswordHash(registerModel.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
-            passwordHash = user.PasswordHash;
-            passwordSalt = user.PasswordSalt;
+            var user = _mapper.MapRegisterModel(registerModel, passwordHash, passwordSalt);
 
             _context.Users.Add(user);
             _context.SaveChanges();

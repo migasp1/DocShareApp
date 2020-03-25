@@ -1,24 +1,30 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using DocShareApp.Helpers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Collections.Generic;
+using Microsoft.IdentityModel.Tokens;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using DocShareApp.Services;
+using System.Text;
+using DocShareApp.Mapper;
 
 namespace DocShareApp
 {
     public class Startup
     {
+
+        private readonly IConfiguration _configuration;
+
         public Startup(IConfiguration configuration)
         {
-            Configuration = configuration;
+            _configuration = configuration;
         }
 
         public IConfiguration Configuration { get; }
@@ -27,9 +33,46 @@ namespace DocShareApp
         //Mine: Here we see dependency injection(services in the constructor)
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddDbContext<DataContext, SqliteDataContext>();
+
+            services.AddScoped<IUserMapper, UserMapper>();
+
+
             services.AddControllers();
 
-            services.AddAuthentication();
+            services.AddCors();
+            //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+            var appSettingsSection = _configuration.GetSection("AppSettings");
+
+            services.Configure<AppSettings>(appSettingsSection);
+
+            var appSettings = appSettingsSection.Get<AppSettings>();
+
+            var key = Encoding.ASCII.GetBytes(appSettings.Secret);
+
+            //Definig schema
+            services.AddAuthentication(configureOptions => 
+            {
+                configureOptions.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                configureOptions.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
+            }).AddJwtBearer(jwtBearerOptions =>
+            {
+                jwtBearerOptions.RequireHttpsMetadata = false;
+                jwtBearerOptions.SaveToken = true;
+                jwtBearerOptions.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
+            });
+
+            services.AddScoped<IUserService, UserService>();
+
+
 
             // Register the Swagger generator, defining 1 or more Swagger documents
             services.AddSwaggerGen(c =>
@@ -50,7 +93,7 @@ namespace DocShareApp
 
             app.UseRouting();
 
-            app.UseAuthentication(); 
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
@@ -63,6 +106,11 @@ namespace DocShareApp
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "DocShareApp");
             });
+
+            app.UseCors(x => x
+               .AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader());
 
             app.UseEndpoints(endpoints =>
             {
