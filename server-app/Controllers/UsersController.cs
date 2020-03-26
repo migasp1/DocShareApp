@@ -94,6 +94,37 @@ namespace DocShareApp.Controllers
             }
         }
 
+        [HttpPost("changePassword")]
+        public IActionResult ChangeUserPassword([FromBody] ChangePasswordModel model)
+        {
+            var id = HttpContext.User.Identity.Name;
+            try
+            {
+                _userService.ChangePassword(model, int.Parse(id));
+                return Ok(new { message = "Changed password successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Something went wrong: ERROR "+ ex.Message });
+            }
+        }
+
+        [HttpPost("changeNameUser")]
+        public IActionResult ChangeNameUser([FromBody]ChangeNameUserModel model)
+        {
+            var id = HttpContext.User.Identity.Name;
+            try
+            {
+                _userService.ChangeNamesUser(model, int.Parse(id));
+                return Ok(new { message = "Changed Name successfuly" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Something went wrong: ERROR " + ex.Message });
+                
+            }
+        }
+
         [HttpDelete("delete")]
         public IActionResult Delete(int id)
         {

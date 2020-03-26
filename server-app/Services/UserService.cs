@@ -63,69 +63,85 @@ namespace DocShareApp.Services
             return user;
         }
 
-        public void Delete(int id)
+        public void ChangePassword(ChangePasswordModel changePasswordModel, int userId)
         {
-            var user = _context.Users.Find(id);
-            if (user != null)
-                _context.Users.Remove(user);
-            _context.SaveChanges();
-        }
+            if (changePasswordModel.OldPassword.Equals(changePasswordModel.NewPassword))
+                throw new ArgumentException("New password must differ from the old password");
 
-        public IEnumerable<User> GetAll()
-        {
-            return _context.Users;
-        }
-
-        public User GetById(int id)
-        {
-            var user = _context.Users.Find(id);
-            if (user == null)
-                return null;
-            return user;
-        }
-
-        public void Update(User userParam, string password = null)
-        {
-            var user = _context.Users.Find(userParam.Id);
+            var user = _context.Users.SingleOrDefault(user => user.Id.Equals(userId));
 
             if (user == null)
                 throw new ApplicationException("User not found");
 
-            //update username if it has changed
-            //we suppose a username already exists
-            if (!string.IsNullOrEmpty(userParam.Username) && userParam.Username != user.Username)
-            {
-                //throw an exception if username already exists
-                if (_context.Users.Any(x => x.Username == userParam.Username))
-                    throw new ApplicationException("Username" + userParam.Username + "is already taken");
+            var oldPasswordHashMatches = VerifyPasswordHash(changePasswordModel.OldPassword, user.PasswordHash, user.PasswordSalt);
 
-                user.Username = userParam.Username;
+            if (!oldPasswordHashMatches)
+                throw new ApplicationException("Old Password is not correct");
 
-            }
-
-            //update user properties if provided
-            if (!string.IsNullOrEmpty(userParam.FirstName))
-                user.FirstName = userParam.FirstName;
-
-            if (!string.IsNullOrEmpty(userParam.LastName))
-                user.LastName = userParam.LastName;
-
-            if (string.IsNullOrEmpty(password))
-            {
-                byte[] passwordHash, passwordSalt;
-                CreatePasswordHash(password, out passwordHash, out passwordSalt);
-
-                user.PasswordHash = passwordHash;
-                user.PasswordSalt = passwordSalt;
-            }
+            CreatePasswordHash(changePasswordModel.NewPassword, out byte[] passwordHash, out byte[] passwordSalt);
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
 
             _context.Users.Update(user);
             _context.SaveChanges();
         }
 
+        public void ChangeNamesUser(ChangeNameUserModel changeNameUserModel, int userId)
+        {
+            if (string.IsNullOrEmpty(changeNameUserModel.NewFirstName) && string.IsNullOrEmpty(changeNameUserModel.NewLastName))
+                throw new ApplicationException("At least one of the fields must be fullfield");
+
+            var user = _context.Users.SingleOrDefault(user => user.Id.Equals(userId));
+
+            if (user == null)
+                throw new ApplicationException("User not found");
+
+            if (user.FirstName.Equals(changeNameUserModel.NewFirstName) && user.LastName.Equals(changeNameUserModel.NewLastName))
+                throw new ApplicationException("First and last name are the same as before");
+
+            if (!string.IsNullOrEmpty(changeNameUserModel.NewFirstName))
+                user.FirstName = changeNameUserModel.NewFirstName;
+
+            if (!string.IsNullOrEmpty(changeNameUserModel.NewLastName))
+                user.LastName = changeNameUserModel.NewLastName;
+
+            _context.Users.Update(user);
+            _context.SaveChanges();
+        }
+
+        //lista de nomes
+        //primeiro e ultimo nome
+        //ordem alfabetica ascendente p/ primeiro, descendente p/seg
+        public IEnumerable<string> GetAllUsernameSpecial()
+        {
+            var list = _context.Users.OrderBy(user => user.FirstName).ThenByDescending(user => user.LastName).Select(user => user.FirstName + " " + user.LastName);
+            return list;
+        }
+
+        //usernames
+        //firstame começa por m
+        //ordenados por id (int)
+        public IEnumerable<string> GetAllUsernameSpecial2()
+        {
+            var list = _context.Users.Where(user => user.Username.StartsWith("m")).OrderBy(user => user.Id).Select(user => user.FirstName);
+            return list;
+        }
+
+        //todos os apelidos
+        //associados a um primeiro nome
+        //list por ordem alfabetica
+        //Dictionary (key=primeiro nome, value = list<string>(apelidos)
+        //Groupby e ToDictionary
+        //nao ha ha elementos duplicados(ja na resposta)
+        //public Dictionary<string, IEnumerable<string>> GetAllSurnamesVerySpezialeByMihail(){
+
+        //    var list = _context.Users
+                          
+        //    }
+
         //helper methods
         //2 objects are created, a password hash a salt(secret key).
-        //using is helpful because these objetcs wont be reused! momory cleaning and more performant
+        //using is helpful because these objetcs wont be reused! memory cleaning and more performant
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
             if (password == null)
@@ -164,6 +180,21 @@ namespace DocShareApp.Services
                 }
             }
             return true;
+        }
+
+        public User GetById(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Update(User user, string password = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Delete(int id)
+        {
+            throw new NotImplementedException();
         }
     }
 }

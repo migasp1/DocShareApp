@@ -32,8 +32,5 @@ namespace DocShareApp.Mapper
                 LastName = userModel.LastName
             };         
         }
-
-
-
     }
 }

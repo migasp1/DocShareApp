@@ -10,6 +10,7 @@ namespace DocShareApp.Mapper
     public interface IUserMapper
     {
         User MapRegisterModel(RegisterModel registerModel, byte[] passwordHash, byte[] passwordSalt);
+
         User MapUserModel(UserModel userModel);
     }
 }

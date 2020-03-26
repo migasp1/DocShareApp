@@ -10,9 +10,10 @@ namespace DocShareApp.Services
     public interface IUserService
     {
         User Authenticate(string username, string password);
-        IEnumerable<User> GetAll();
-        User GetById(int id);
         User Create(RegisterModel registerModel);
+        void ChangePassword(ChangePasswordModel changePasswordModel, int userId);
+        void ChangeNamesUser(ChangeNameUserModel changeNameUserModel, int userId);
+        User GetById(int id);
         void Update(User user, string password = null);
         void Delete(int id);
     }
