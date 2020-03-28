@@ -39,6 +39,9 @@ namespace DocShareApp.Migrations
                     b.Property<string>("Username")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Role")
+                       .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Users");

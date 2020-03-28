@@ -40,11 +40,11 @@ namespace DocShareApp.Controllers
         //framework will search for a json in the HTTP message body so a model can be created
         public IActionResult Authenticate([FromBody]AuthenticateModel model)
         {
-            var user = _userService.Authenticate(model.Username, model.Password);
-            //return BadRequest("Username or password is incorrect");
+            var user = _userService.Authenticate(model.Email, model.Password);
+            //return BadRequest("Email or password is incorrect");
 
             if (user == null)
-                return BadRequest(new { message = "Username or Password is incorrect" });
+                return BadRequest(new { message = "Email or Password is incorrect" });
 
             //Generating JWT if authentication is successful(creating token):
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -58,7 +58,10 @@ namespace DocShareApp.Controllers
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, user.Id.ToString())
+                    new Claim(ClaimTypes.Name, user.Id.ToString()),
+
+                    //Role is sent in the token
+                    new Claim(ClaimTypes.Role, user.Role)
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -72,7 +75,7 @@ namespace DocShareApp.Controllers
             return Ok(new
             {
                 Id = user.Id,
-                Username = user.Username,
+                Username = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Token = tokenString
@@ -94,6 +97,16 @@ namespace DocShareApp.Controllers
             }
         }
 
+
+        [Authorize(Roles = Role.Admin)]
+        [HttpGet("getAllUsers")]
+        public IActionResult GetAllUsers()
+        {
+            var users = _userService.GetAllUsers();
+            return Ok(users);
+        }
+
+
         [HttpPost("changePassword")]
         public IActionResult ChangeUserPassword([FromBody] ChangePasswordModel model)
         {
@@ -105,7 +118,7 @@ namespace DocShareApp.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = "Something went wrong: ERROR "+ ex.Message });
+                return BadRequest(new { message = "Something went wrong: ERROR " + ex.Message });
             }
         }
 
@@ -121,15 +134,25 @@ namespace DocShareApp.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { message = "Something went wrong: ERROR " + ex.Message });
-                
+
             }
         }
 
+        [Authorize(Roles = Role.Admin)]
         [HttpDelete("delete")]
         public IActionResult Delete(int id)
         {
-            _userService.Delete(id);
-            return Ok();
+            try
+            {
+                if (id == int.Parse(HttpContext.User.Identity.Name))
+                    return Forbid("Cannot delete current user");
+                _userService.Delete(id);
+                return Ok(new { message = "User successfully deleted" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Something went wrong ERROR: {ex.Message}" });
+            }
         }
     }
 }

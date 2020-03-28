@@ -9,12 +9,11 @@ namespace DocShareApp.Services
 {
     public interface IUserService
     {
-        User Authenticate(string username, string password);
+        User Authenticate(string email, string password);
         User Create(RegisterModel registerModel);
         void ChangePassword(ChangePasswordModel changePasswordModel, int userId);
         void ChangeNamesUser(ChangeNameUserModel changeNameUserModel, int userId);
-        User GetById(int id);
-        void Update(User user, string password = null);
+        public IEnumerable<User> GetAllUsers();
         void Delete(int id);
     }
 }

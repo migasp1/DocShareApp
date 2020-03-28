@@ -15,7 +15,7 @@ namespace DocShareApp.Models
         //This annotations let the api return an error message in case one or both
         //parameters and not filled.
         [Required]
-        public string Username { get; set; }
+        public string Email { get; set; }
         [Required]
         public string Password { get; set; }
     }

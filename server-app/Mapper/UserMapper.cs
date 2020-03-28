@@ -13,7 +13,7 @@ namespace DocShareApp.Mapper
         {
             return new User
             {
-                Username = registerModel.Username,
+                Email = registerModel.Email,
                 FirstName = registerModel.FirstName,
                 LastName = registerModel.LastName,
                 PasswordHash = passwordHash,
@@ -27,7 +27,7 @@ namespace DocShareApp.Mapper
             return new User
             {
                 Id = userModel.Id,
-                Username = userModel.UserName,
+                Email = userModel.Email,
                 FirstName = userModel.FirstName,
                 LastName = userModel.LastName
             };         
