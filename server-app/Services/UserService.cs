@@ -257,6 +257,14 @@ namespace DocShareApp.Services
             return true;
         }
 
+        public User RetrievePersonalUserInfo(int id)
+        {
+            User user = _context.Users.SingleOrDefault(user => user.Id.Equals(id));
+            if (user == null)
+                throw new ApplicationException("User does not exist");
+            return user;
+        }
+
         public IEnumerable<User> GetAllUsers()
         {
             return _context.Users.Select(user => user);
@@ -269,7 +277,7 @@ namespace DocShareApp.Services
                 throw new ApplicationException("User does not exist");
 
             EntityEntry<User> removedUser = _context.Users.Remove(user);
-           
+
             _context.SaveChanges();
         }
     }

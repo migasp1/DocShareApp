@@ -74,10 +74,10 @@ namespace DocShareApp.Controllers
             //returning basic user info + the token
             return Ok(new
             {
-                Id = user.Id,
-                Username = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
+                user.Id,
+                user.Email,
+                user.FirstName,
+                user.LastName,
                 Token = tokenString
             });
         }
@@ -94,6 +94,26 @@ namespace DocShareApp.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("userPersonalInfo")]
+        public IActionResult RetrievePersonalUserInfo()
+        {
+            try
+            {
+                User user = _userService.RetrievePersonalUserInfo(int.Parse(HttpContext.User.Identity.Name));
+                return Ok(new
+                {
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.Role
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Something went wrong ERROR: {ex.Message}" });
             }
         }
 

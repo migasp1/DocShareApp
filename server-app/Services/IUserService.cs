@@ -13,7 +13,8 @@ namespace DocShareApp.Services
         User Create(RegisterModel registerModel);
         void ChangePassword(ChangePasswordModel changePasswordModel, int userId);
         void ChangeNamesUser(ChangeNameUserModel changeNameUserModel, int userId);
-        public IEnumerable<User> GetAllUsers();
+        IEnumerable<User> GetAllUsers();
+        User RetrievePersonalUserInfo(int id);
         void Delete(int id);
     }
 }
