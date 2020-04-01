@@ -14,9 +14,9 @@ namespace DocShareApp.Models
     {
         //This annotations let the api return an error message in case one or both
         //parameters and not filled.
-        [Required]
+        [Required(AllowEmptyStrings = false, ErrorMessage = "Email cannot be null")]
         public string Email { get; set; }
-        [Required]
+        [Required(AllowEmptyStrings = false, ErrorMessage = "Password cannot be null")]
         public string Password { get; set; }
     }
 }

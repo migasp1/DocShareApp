@@ -17,8 +17,8 @@ namespace DocShareApp.Mapper
                 FirstName = registerModel.FirstName,
                 LastName = registerModel.LastName,
                 PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt
-                
+                PasswordSalt = passwordSalt,
+                Role = Role.User
             };
         }
 

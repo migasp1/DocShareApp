@@ -14,45 +14,53 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using DocShareApp.Services;
 using System.Text;
 using DocShareApp.Mapper;
+using MongoDB.Driver;
 
 namespace DocShareApp
 {
     public class Startup
     {
-
-        private readonly IConfiguration _configuration;
+        public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
         {
-            _configuration = configuration;
+            Configuration = configuration;
         }
-
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         //Mine: Here we see dependency injection(services in the constructor)
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<DataContext, SqliteDataContext>();
+            services.AddOptions();
 
-            services.AddScoped<IUserMapper, UserMapper>();
-
+            services.AddSingleton<IUserMapper, UserMapper>();
 
             services.AddControllers();
 
             services.AddCors();
-            //services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+           
+            services.Configure<KeyOptions>(Configuration.GetSection("KeyOptions"));
 
-            var appSettingsSection = _configuration.GetSection("AppSettings");
+            if (Configuration.GetValue<bool>("MongoConnection:UseMongoDb"))
+            {
+                services.AddSingleton(serviceProvider => new Random(666));
+                var mongoConfSection = Configuration.GetSection("MongoConnection");
+                MongoOptions mongoConfig = mongoConfSection.Get<MongoOptions>();
+                services.Configure<MongoOptions>(mongoConfSection);
+                services.AddSingleton<IMongoClient>(serviceProvider => new MongoClient(mongoConfig.MongoDbConnectionString));
+                services.AddSingleton<IUserService, MongoDbUserService>();
+            }
+            else
+            {
+                services.AddDbContext<DataContext, SqliteDataContext>();
+                services.Configure<SqlOptions>(Configuration.GetSection("SqlOptions"));
+                services.AddScoped<IUserService, SqlUserService>();
+            }
 
-            services.Configure<AppSettings>(appSettingsSection);
-
-            var appSettings = appSettingsSection.Get<AppSettings>();
-
-            var key = Encoding.ASCII.GetBytes(appSettings.Secret);
+            var key = Encoding.ASCII.GetBytes(Configuration.GetSection("KeyOptions").Get<KeyOptions>().Secret);
 
             //Definig schema
-            services.AddAuthentication(configureOptions => 
+            services.AddAuthentication(configureOptions =>
             {
                 configureOptions.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 configureOptions.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -69,10 +77,6 @@ namespace DocShareApp
                     ValidateAudience = false
                 };
             });
-
-            services.AddScoped<IUserService, UserService>();
-
-
 
             // Register the Swagger generator, defining 1 or more Swagger documents
             services.AddSwaggerGen(c =>

@@ -13,7 +13,7 @@ namespace DocShareApp.Helpers
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
-            options.UseSqlite(Configuration.GetConnectionString("DataBaseString"));
+            options.UseSqlite(Configuration.GetConnectionString("SqlConnectionString"));
         }
     }
 }

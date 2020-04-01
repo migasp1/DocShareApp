@@ -7,22 +7,23 @@ using DocShareApp.Helpers;
 using DocShareApp.Models;
 using DocShareApp.Mapper;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Threading;
+
 namespace DocShareApp.Services
 {
-    public class UserService : IUserService
+    public class SqlUserService : IUserService
     {
 
         private DataContext _context;
         private IUserMapper _mapper;
 
-        public UserService(DataContext context, IUserMapper userMapper)
+        public SqlUserService(DataContext context, IUserMapper userMapper)
         {
             _context = context;
             _mapper = userMapper;
-
         }
 
-        public User Authenticate(string email, string password)
+        public Task<User> Authenticate(string email, string password, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
                 return null;
@@ -44,10 +45,10 @@ namespace DocShareApp.Services
                 return null;
 
             // authentication successful
-            return user;
+            return Task.FromResult(user);
         }
 
-        public User Create(RegisterModel registerModel)
+        public Task<User> Create(RegisterModel registerModel, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(registerModel.Password))
                 throw new ArgumentException("Password is required");
@@ -57,14 +58,13 @@ namespace DocShareApp.Services
             CreatePasswordHash(registerModel.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
             var user = _mapper.MapRegisterModel(registerModel, passwordHash, passwordSalt);
-            user.Role = Role.User;
             _context.Users.Add(user);
             _context.SaveChanges();
 
-            return user;
+            return Task.FromResult(user);
         }
 
-        public void ChangePassword(ChangePasswordModel changePasswordModel, int userId)
+        public Task ChangePassword(ChangePasswordModel changePasswordModel, int userId, CancellationToken cancellationToken = default)
         {
             if (changePasswordModel.OldPassword.Equals(changePasswordModel.NewPassword))
                 throw new ArgumentException("New password must differ from the old password");
@@ -85,9 +85,11 @@ namespace DocShareApp.Services
 
             _context.Users.Update(user);
             _context.SaveChanges();
+
+            return Task.CompletedTask;
         }
 
-        public void ChangeNamesUser(ChangeNameUserModel changeNameUserModel, int userId)
+        public Task ChangeNamesUser(ChangeNameUserModel changeNameUserModel, int userId, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrEmpty(changeNameUserModel.NewFirstName) && string.IsNullOrEmpty(changeNameUserModel.NewLastName))
                 throw new ApplicationException("At least one of the fields must be fullfield");
@@ -108,25 +110,55 @@ namespace DocShareApp.Services
 
             _context.Users.Update(user);
             _context.SaveChanges();
+
+            return Task.CompletedTask;
+        }
+
+        public Task<User> RetrievePersonalUserInfo(int id, CancellationToken cancellationToken = default)
+        {
+            User user = _context.Users.SingleOrDefault(user => user.Id.Equals(id));
+            if (user == null)
+                throw new ApplicationException("User does not exist");
+            return Task.FromResult(user);
+        }
+
+        public Task<IEnumerable<User>> GetAllUsers(CancellationToken cancellationToken = default)
+        {
+            IQueryable<User> users = _context.Users.Select(user => user);
+            
+            return Task.FromResult<IEnumerable<User>>(users);
+        }
+
+        public Task Delete(int id, CancellationToken cancellationToken = default)
+        {
+            User user = _context.Users.SingleOrDefault(user => user.Id.Equals(id));
+            if (user == null)
+                throw new ApplicationException("User does not exist");
+
+            EntityEntry<User> removedUser = _context.Users.Remove(user);
+
+            _context.SaveChanges();
+
+            return Task.CompletedTask;
         }
 
         //lista de nomes
         //primeiro e ultimo nome
         //ordem alfabetica ascendente p/ primeiro, descendente p/seg
-        public IEnumerable<string> GetAllUsernameSpecial()
+        public Task<IEnumerable<string>> GetAllUsernameSpecial()
         {
-            var list = _context.Users.OrderBy(user => user.FirstName).ThenByDescending(user => user.LastName).Select(user => user.FirstName + " " + user.LastName);
-            return list;
+            IQueryable<string> list = _context.Users.OrderBy(user => user.FirstName).ThenByDescending(user => user.LastName).Select(user => user.FirstName + " " + user.LastName);
+            return Task.FromResult<IEnumerable<string>>(list);
         }
 
         //usernames
         //firstame começa por m
         //ordenados por id (int)
-        public IEnumerable<string> GetAllUsernameSpecial2()
-        {
-            var list = _context.Users.Where(user => user.Email.StartsWith("m")).OrderBy(user => user.Id).Select(user => user.FirstName);
-            return list;
-        }
+        //public IEnumerable<string> GetAllUsernameSpecial2()
+        //{
+        //    var list = _context.Users.Where(user => user.Email.StartsWith("m")).OrderBy(user => user.Id).Select(user => user.FirstName);
+        //    return list;
+        //}
 
         //todos os apelidos
         //associados a um primeiro nome
@@ -135,69 +167,69 @@ namespace DocShareApp.Services
         //Groupby e ToDictionary
         //nao ha ha elementos duplicados(ja na resposta)
 
-        public Dictionary<string, List<string>> GetAllSurnamesVerySpezialeByMihail()
-        {
+        //public Dictionary<string, List<string>> GetAllSurnamesVerySpezialeByMihail()
+        //{
 
-            Dictionary<string, List<string>> dictionary = _context.Users.GroupBy(user => user.FirstName, StringComparer.CurrentCultureIgnoreCase).ToDictionary(group => group.Key, group => group.OrderBy(user => user.LastName)
-            .Select(user => user.LastName).Distinct(StringComparer.InvariantCultureIgnoreCase).ToList());
+        //    Dictionary<string, List<string>> dictionary = _context.Users.GroupBy(user => user.FirstName, StringComparer.CurrentCultureIgnoreCase).ToDictionary(group => group.Key, group => group.OrderBy(user => user.LastName)
+        //    .Select(user => user.LastName).Distinct(StringComparer.InvariantCultureIgnoreCase).ToList());
 
-            return dictionary;
-        }
+        //    return dictionary;
+        //}
 
         //primeiros 10 first e last names
         //ordenados por ordem alfabetica
         //first e last acabam em "a"
 
-        public IEnumerable<string> GetFirstTenSpecial()
-        {
-            var list = _context.Users.Where(user => user.FirstName.EndsWith("a", StringComparison.CurrentCultureIgnoreCase) && user.LastName.EndsWith("a", StringComparison.CurrentCultureIgnoreCase))
-                .OrderBy(user => user.FirstName).ThenBy(user => user.LastName).Select(user => user.FirstName + " " + user.LastName).Take(10);
-            return list;
-        }
+        //public IEnumerable<string> GetFirstTenSpecial()
+        //{
+        //    var list = _context.Users.Where(user => user.FirstName.EndsWith("a", StringComparison.CurrentCultureIgnoreCase) && user.LastName.EndsWith("a", StringComparison.CurrentCultureIgnoreCase))
+        //        .OrderBy(user => user.FirstName).ThenBy(user => user.LastName).Select(user => user.FirstName + " " + user.LastName).Take(10);
+        //    return list;
+        //}
 
         //todos os users
         //nomes repetidos
         //dicionario chave first e last name
         //value = numero total de pessoas com o nome da chave 
 
-        public Dictionary<string, int> GetSumOfAllFirstAndLastNames()
-        {
-            var dictionary = _context.Users.GroupBy(user => user.FirstName + " " + user.LastName, StringComparer.CurrentCultureIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.Key.Count());
-            return dictionary;
-        }
+        //public Dictionary<string, int> GetSumOfAllFirstAndLastNames()
+        //{
+        //    var dictionary = _context.Users.GroupBy(user => user.FirstName + " " + user.LastName, StringComparer.CurrentCultureIgnoreCase)
+        //        .ToDictionary(group => group.Key, group => group.Key.Count());
+        //    return dictionary;
+        //}
 
         //dicionario 
         // chave = carater
         //value = First Names associados ao carater da key
         //se houver so um, CAGUEI
 
-        public Dictionary<char, List<string>> GetAllFirstNamesSpecial()
-        {
-            Dictionary<char, List<string>> dictionary = _context.Users.GroupBy(user => user.FirstName.First()).Where(group => group.Count() > 1)
-                .ToDictionary(group => group.Key, group => group.Select(user => user.FirstName).ToList());
-            return dictionary;
-        }
+        //public Dictionary<char, List<string>> GetAllFirstNamesSpecial()
+        //{
+        //    Dictionary<char, List<string>> dictionary = _context.Users.GroupBy(user => user.FirstName.First()).Where(group => group.Count() > 1)
+        //        .ToDictionary(group => group.Key, group => group.Select(user => user.FirstName).ToList());
+        //    return dictionary;
+        //}
 
         //query em que dê um dicionario em que tens como chave um inteiro, que é o numero de 
         //letras do primeiro nome, e como valor uma lista de todos os primeiros 
         //nomes com esse numero de letras
         // por ordem alfabetica os nomes
         //e case insensitive
-        public Dictionary<int, List<string>> GetAllNumberOfOcurrencesSpecial()
-        {
-            Dictionary<int, List<string>> dictionary = _context.Users.GroupBy(user => user.FirstName.Count())
-                .ToDictionary(group => group.Key, group => group.OrderBy(user => user.FirstName)
-                .Select(user => user.FirstName).Distinct(StringComparer.InvariantCultureIgnoreCase).ToList());
-            return dictionary;
-        }
+        //public Dictionary<int, List<string>> GetAllNumberOfOcurrencesSpecial()
+        //{
+        //    Dictionary<int, List<string>> dictionary = _context.Users.GroupBy(user => user.FirstName.Count())
+        //        .ToDictionary(group => group.Key, group => group.OrderBy(user => user.FirstName)
+        //        .Select(user => user.FirstName).Distinct(StringComparer.InvariantCultureIgnoreCase).ToList());
+        //    return dictionary;
+        //}
 
         //total de nomes diferentes que 
         //ha na base de dados (comb diffs)
-        public int GetAllNamesFromDB()
-        {
-            return _context.Users.Select(user => user.FirstName + " " + user.LastName).Distinct(StringComparer.InvariantCultureIgnoreCase).Count();
-        }
+        //public int GetAllNamesFromDB()
+        //{
+        //    return _context.Users.Select(user => user.FirstName + " " + user.LastName).Distinct(StringComparer.InvariantCultureIgnoreCase).Count();
+        //}
 
         //todos os nomes
         //letra do meio do primeiro nome e qqlr coisa
@@ -206,24 +238,19 @@ namespace DocShareApp.Services
         //nao ha duplicados na string final concatenada
         //InvariantCultureIgnoreCase
         //nova func: SelectMany e ElementAt
-        public Dictionary<char, int> GetSuperSpecialByMihail()
-        {
-            var dictionary = _context.Users.GroupBy(user => user.FirstName.ElementAt(user.FirstName.Length / 2))
-                .ToDictionary(group => group.Key, group => group.Select(user => user.FirstName).Distinct(StringComparer.InvariantCultureIgnoreCase).
-                SelectMany(user => user).Count());
-            return dictionary;
-        }
+        //public Dictionary<char, int> GetSuperSpecialByMihail()
+        //{
+        //    var dictionary = _context.Users.GroupBy(user => user.FirstName.ElementAt(user.FirstName.Length / 2))
+        //        .ToDictionary(group => group.Key, group => group.Select(user => user.FirstName).Distinct(StringComparer.InvariantCultureIgnoreCase).
+        //        SelectMany(user => user).Count());
+        //    return dictionary;
+        //}
 
         //helper methods
         //2 objects are created, a password hash a salt(secret key).
         //using is helpful because these objetcs wont be reused! memory cleaning and more performant
         private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
-            if (password == null)
-                throw new ArgumentNullException("Password");
-            if (string.IsNullOrWhiteSpace(password))
-                throw new ArgumentException("Value cannot be empty nor contain whitespaces", "password");
-
             using (var hmac = new System.Security.Cryptography.HMACSHA512())
             {
                 passwordSalt = hmac.Key;
@@ -255,31 +282,7 @@ namespace DocShareApp.Services
                 }
             }
             return true;
-        }
-
-        public User RetrievePersonalUserInfo(int id)
-        {
-            User user = _context.Users.SingleOrDefault(user => user.Id.Equals(id));
-            if (user == null)
-                throw new ApplicationException("User does not exist");
-            return user;
-        }
-
-        public IEnumerable<User> GetAllUsers()
-        {
-            return _context.Users.Select(user => user);
-        }
-
-        public void Delete(int id)
-        {
-            User user = _context.Users.SingleOrDefault(user => user.Id.Equals(id));
-            if (user == null)
-                throw new ApplicationException("User does not exist");
-
-            EntityEntry<User> removedUser = _context.Users.Remove(user);
-
-            _context.SaveChanges();
-        }
+        }      
     }
 }
 

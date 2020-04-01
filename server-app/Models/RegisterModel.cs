@@ -8,16 +8,16 @@ namespace DocShareApp.Models
 {
     public class RegisterModel
     {
-        [Required]
+        [Required(AllowEmptyStrings = false, ErrorMessage = "First name field must not be empty")]
         public string FirstName { get; set; }
 
-        [Required]
+        [Required(AllowEmptyStrings = false, ErrorMessage = "Last name field must not be empty")]
         public string LastName { get; set; }
 
-        [Required]
+        [Required(AllowEmptyStrings = false, ErrorMessage = "Email field must not be empty")]
         public string Email { get; set; }
 
-        [Required]
+        [Required(AllowEmptyStrings = false, ErrorMessage = "Password field must not be empty")]
         public string Password { get; set; }
     }
 }

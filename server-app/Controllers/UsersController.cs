@@ -12,7 +12,8 @@ using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DocShareApp.Controllers
 {
@@ -21,39 +22,36 @@ namespace DocShareApp.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
+
         private IUserService _userService;
-        private readonly AppSettings _appSettings;
-        private IUserMapper _userMapper;
-
-        public DateTime Expires { get; private set; }
-
-        public UsersController(IUserService userService, IOptions<AppSettings> appSettings, IUserMapper userMapper)
+        private readonly KeyOptions _appSettings;
+  
+        public UsersController(IUserService userService, IOptions<KeyOptions> appSettings)
         {
             _userService = userService;
             _appSettings = appSettings.Value;
-            _userMapper = userMapper;
         }
 
         [AllowAnonymous]
         [HttpPost("login")]
         //FromBody notation used so parametres are fetched from the HTTP message body
         //framework will search for a json in the HTTP message body so a model can be created
-        public IActionResult Authenticate([FromBody]AuthenticateModel model)
+        //cancellation token is optional (default)
+        public async Task<IActionResult> Authenticate([FromBody]AuthenticateModel model, CancellationToken cancellationToken = default)
         {
-            var user = _userService.Authenticate(model.Email, model.Password);
-            //return BadRequest("Email or password is incorrect");
-
+            User user = await _userService.Authenticate(model.Email, model.Password, cancellationToken).ConfigureAwait(false);
+     
             if (user == null)
                 return BadRequest(new { message = "Email or Password is incorrect" });
 
             //Generating JWT if authentication is successful(creating token):
-            var tokenHandler = new JwtSecurityTokenHandler();
+            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
             //Generating key stored in AppSettings to digitally sign the token
-            var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
+            byte[] key = Encoding.ASCII.GetBytes(_appSettings.Secret);
             //The descriptor is the payload of the JWT and can have whatever date the developer
             //wants to insert
             //Editing proprieties
-            var tokenDescriptor = new SecurityTokenDescriptor()
+            SecurityTokenDescriptor tokenDescriptor = new SecurityTokenDescriptor()
             //tokenDescriptor.SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature);
             {
                 Subject = new ClaimsIdentity(new Claim[]
@@ -67,7 +65,7 @@ namespace DocShareApp.Controllers
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             //creating the token with the specified descriptor
-            var token = tokenHandler.CreateToken(tokenDescriptor);
+            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
             //serializaing the token
             string tokenString = tokenHandler.WriteToken(token);
 
@@ -84,12 +82,12 @@ namespace DocShareApp.Controllers
 
         [AllowAnonymous]
         [HttpPost("register")]
-        public IActionResult Register([FromBody]RegisterModel model)
+        public async Task<IActionResult> Register([FromBody]RegisterModel model, CancellationToken cancellationToken = default)
         {
             try
             {
-                _userService.Create(model);
-                return Ok(new { message = "Successfully registred" });
+                await _userService.Create(model, cancellationToken).ConfigureAwait(false);
+                return Ok(new { message = "Successfully registered" });
             }
             catch (Exception ex)
             {
@@ -98,11 +96,11 @@ namespace DocShareApp.Controllers
         }
 
         [HttpGet("userPersonalInfo")]
-        public IActionResult RetrievePersonalUserInfo()
+        public async Task<IActionResult> RetrievePersonalUserInfo(CancellationToken cancellationToken = default)
         {
             try
             {
-                User user = _userService.RetrievePersonalUserInfo(int.Parse(HttpContext.User.Identity.Name));
+                User user = await _userService.RetrievePersonalUserInfo(int.Parse(HttpContext.User.Identity.Name), cancellationToken).ConfigureAwait(false);
                 return Ok(new
                 {
                     user.Email,
@@ -120,20 +118,21 @@ namespace DocShareApp.Controllers
 
         [Authorize(Roles = Role.Admin)]
         [HttpGet("getAllUsers")]
-        public IActionResult GetAllUsers()
+        public async Task<IActionResult> GetAllUsers(CancellationToken cancellationToken = default)
         {
-            var users = _userService.GetAllUsers();
+            var users = await _userService.GetAllUsers(cancellationToken).ConfigureAwait(false);
+
             return Ok(users);
         }
 
 
         [HttpPost("changePassword")]
-        public IActionResult ChangeUserPassword([FromBody] ChangePasswordModel model)
+        public async Task<IActionResult> ChangeUserPassword([FromBody] ChangePasswordModel model, CancellationToken cancellationToken = default)
         {
             var id = HttpContext.User.Identity.Name;
             try
             {
-                _userService.ChangePassword(model, int.Parse(id));
+                await _userService.ChangePassword(model, int.Parse(id), cancellationToken).ConfigureAwait(false);
                 return Ok(new { message = "Changed password successfully" });
             }
             catch (Exception ex)
@@ -143,12 +142,12 @@ namespace DocShareApp.Controllers
         }
 
         [HttpPost("changeNameUser")]
-        public IActionResult ChangeNameUser([FromBody]ChangeNameUserModel model)
+        public IActionResult ChangeNameUser([FromBody]ChangeNameUserModel model, CancellationToken cancellationToken = default)
         {
             var id = HttpContext.User.Identity.Name;
             try
             {
-                _userService.ChangeNamesUser(model, int.Parse(id));
+                _userService.ChangeNamesUser(model, int.Parse(id), cancellationToken).ConfigureAwait(false);
                 return Ok(new { message = "Changed Name successfuly" });
             }
             catch (Exception ex)
@@ -160,13 +159,13 @@ namespace DocShareApp.Controllers
 
         [Authorize(Roles = Role.Admin)]
         [HttpDelete("delete")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (id == int.Parse(HttpContext.User.Identity.Name))
                     return Forbid("Cannot delete current user");
-                _userService.Delete(id);
+                await _userService.Delete(id, cancellationToken).ConfigureAwait(false);
                 return Ok(new { message = "User successfully deleted" });
             }
             catch (Exception ex)

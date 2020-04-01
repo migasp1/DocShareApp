@@ -17,7 +17,7 @@ namespace DocShareApp.Helpers
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
             //connect to sql server database
-            options.UseSqlServer(Configuration.GetConnectionString("DataBaseString"));
+            options.UseSqlServer(Configuration.GetConnectionString("SqlConnectionString"));
         }
 
         //This is a mandatory class representing an entity set that can be used 

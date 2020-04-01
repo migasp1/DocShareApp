@@ -20,7 +20,16 @@ namespace DocShareApp
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>();
+                    webBuilder.UseStartup<Startup>()
+                    .ConfigureAppConfiguration((context, builder) =>
+                     {
+                         IWebHostEnvironment env = context.HostingEnvironment;
+                         //where the app is locally
+                         builder.SetBasePath(env.ContentRootPath);
+                         builder.AddJsonFile("appsettings.json", false, true);
+                         builder.AddJsonFile($"appsettings.{env.EnvironmentName}.json", true, true);
+                         builder.AddEnvironmentVariables();
+                     });
                 });
     }
 }

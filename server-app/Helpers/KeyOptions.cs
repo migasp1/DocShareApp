@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace DocShareApp.Helpers
 {
-    public class AppSettings
+    public class KeyOptions
     {
         //Used in appsettings.json to sign and verify JWT tokens
         public string Secret { get; set; }
