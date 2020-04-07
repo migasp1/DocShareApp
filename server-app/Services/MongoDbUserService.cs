@@ -15,7 +15,7 @@ using System.Runtime.CompilerServices;
 namespace DocShareApp.Services
 {
     public class MongoDbUserService : IUserService
-    { 
+    {
         private readonly IMongoClient _mongoClient;
         private readonly MongoOptions _options;
         private IUserMapper _userMapper;
@@ -31,8 +31,9 @@ namespace DocShareApp.Services
 
         public async Task<User> Create(RegisterModel registerModel, CancellationToken cancellationToken = default)
         {
-            IAsyncCursor<User> users = await _mongoClient.GetDatabase(_options.Database).GetCollection<User>("Users")
-                .FindAsync(user => user.Email.Equals(registerModel.Email), new FindOptions<User, User> { Limit = 1 }, cancellationToken).ConfigureAwait(false);
+            IAsyncCursor<User> users = await _mongoClient.GetDatabase(_options.Database).GetCollection<User>("Users").
+                FindAsync(user => user.Email.Equals(registerModel.Email), new FindOptions<User, User> {Limit = 1 }, cancellationToken).ConfigureAwait(false);
+
 
             List<User> listusers = await users.ToListAsync().ConfigureAwait(false);
 

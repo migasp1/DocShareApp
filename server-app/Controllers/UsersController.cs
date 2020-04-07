@@ -142,12 +142,12 @@ namespace DocShareApp.Controllers
         }
 
         [HttpPost("changeNameUser")]
-        public IActionResult ChangeNameUser([FromBody]ChangeNameUserModel model, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> ChangeNameUser([FromBody]ChangeNameUserModel model, CancellationToken cancellationToken = default)
         {
             var id = HttpContext.User.Identity.Name;
             try
             {
-                _userService.ChangeNamesUser(model, int.Parse(id), cancellationToken).ConfigureAwait(false);
+                await _userService.ChangeNamesUser(model, int.Parse(id), cancellationToken).ConfigureAwait(false);
                 return Ok(new { message = "Changed Name successfuly" });
             }
             catch (Exception ex)

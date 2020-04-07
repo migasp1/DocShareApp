@@ -33,7 +33,7 @@ namespace DocShareApp
         {
             services.AddOptions();
 
-            services.AddSingleton<IUserMapper, UserMapper>();
+            services.AddScoped<IUserMapper, UserMapper>();
 
             services.AddControllers();
 
@@ -43,12 +43,12 @@ namespace DocShareApp
 
             if (Configuration.GetValue<bool>("MongoConnection:UseMongoDb"))
             {
-                services.AddSingleton(serviceProvider => new Random(666));
+                services.AddSingleton(serviceProvider => new Random());
                 var mongoConfSection = Configuration.GetSection("MongoConnection");
                 MongoOptions mongoConfig = mongoConfSection.Get<MongoOptions>();
                 services.Configure<MongoOptions>(mongoConfSection);
                 services.AddSingleton<IMongoClient>(serviceProvider => new MongoClient(mongoConfig.MongoDbConnectionString));
-                services.AddSingleton<IUserService, MongoDbUserService>();
+                services.AddScoped<IUserService, MongoDbUserService>();
             }
             else
             {
