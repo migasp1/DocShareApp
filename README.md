@@ -1,2 +1,2 @@
 # DocShareApp
-A Google Docs look-alike application using the .Net Framework
+A StandVirtual look-alike application using the .Net Core Framework
